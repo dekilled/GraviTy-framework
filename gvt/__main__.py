@@ -8,7 +8,7 @@
     gvt check app.gvt              só procura erros (para o editor e o CI)
     gvt version
 
-O Gravity é procurado em --gravity, em GRAVITY_DIR ou num LUMNA_OS/gravity por perto.
+O Gravity é o que vem com o framework (gravity/). Para usar outro: --gravity ou GRAVITY_DIR.
 """
 
 import argparse
@@ -64,7 +64,7 @@ def main(argv=None):
     c.add_argument("files", nargs="+")
     for p in (r, b, c):
         p.add_argument("--gravity", default=os.environ.get("GRAVITY_DIR"),
-                       help="a pasta gravity/ do LUMNA_OS (ou GRAVITY_DIR)")
+                       help="outra pasta do Gravity (por padrão, a gravity/ do framework)")
     sub.add_parser("version", help="mostra a versão")
     args = ap.parse_args(argv)
 
@@ -75,13 +75,13 @@ def main(argv=None):
     native = args.cmd == "run" or (args.cmd == "build" and args.exe)
     files = args.files if args.cmd == "check" else [args.file]
     status = 0
-    for path in files:
-        gdir = args.gravity
+    try:
+        gdir = find_gravity(args.gravity)
+    except NativeError as e:
         if native:
-            try:
-                gdir = find_gravity(args.gravity, path)
-            except NativeError as e:
-                return fail(e.message, e.hint)
+            return fail(e.message, e.hint)
+        gdir = None  # para só gerar o C não precisa do Gravity (perde-se só a conferência dos ícones)
+    for path in files:
         try:
             code, warnings, src = compile_file(path, gdir)
         except FileNotFoundError:

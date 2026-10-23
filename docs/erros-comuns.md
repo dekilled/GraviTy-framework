@@ -85,10 +85,10 @@ O `gvt build app.gvt` só gera o código-fonte em C. Para ter um programa, use `
 (compila e abre) ou `gvt build app.gvt --exe` (só compila). Eles acham o Gravity, compilam a
 `libgravity` e chamam o compilador de C por você.
 
-### `não achei o Gravity`
+### `não achei o Gravity em '...'`
 
-O `gvt run` precisa da pasta `gravity/` do LUMNA_OS, que só existe na branch `lumna-mobile`:
-`git -C ~/LUMNA_OS checkout lumna-mobile` e `export GRAVITY_DIR=~/LUMNA_OS/gravity`.
+Você passou um `--gravity` (ou um `GRAVITY_DIR`) que não aponta para uma pasta do Gravity. Sem
+nenhum dos dois, o `gvt` usa a pasta `gravity/` que vem com o framework, que é o normal.
 
 ### `faltam bibliotecas do Gravity`
 
@@ -104,7 +104,7 @@ sessão Wayland, ou do Orbit. Numa sessão X11 ou num terminal sem interface gr�
 
 - **`'x' é declarado e nunca usado`**: uma variável local ou um parâmetro que ninguém lê. Apague, ou
   use `for i in 0..len(lista)` se só precisa do índice.
-- **`o Gravity não tem o ícone 'x'`**: só aparece com `--gravity` (ou `GRAVITY_DIR`). A dica diz o
+- **`o Gravity não tem o ícone 'x'`**: o nome não está entre os ícones do Gravity. A dica diz o
   nome mais parecido.
 - **`este slider mostra uma conta e não tem on_change`**: o slider mexe, mas nada muda. Use uma
   variável no `value`, ou trate a mudança no `on_change`.

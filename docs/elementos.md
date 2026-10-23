@@ -116,9 +116,8 @@ icon("check", 16, color: accent)
 | `size` (o 2.º valor) | número | `24` |
 | `color` | uma cor | `icon` do tema |
 
-Os ícones são os mesmos 130 do shell (`shell/src/components/Icon.vue`). Com `--gravity` (ou
-`GRAVITY_DIR`), o `gvt` avisa quando o nome não existe e sugere o certo. A lista está em
-`gravity/src/gv_icones.c`.
+Os ícones são os mesmos 130 do shell do LUMNA (`shell/src/components/Icon.vue`, no LUMNA_OS). O
+`gvt` avisa quando o nome não existe e sugere o certo. A lista está em `gravity/src/gv_icones.c`.
 
 ---
 

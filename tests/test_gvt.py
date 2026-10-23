@@ -2,8 +2,8 @@
 
     python3 -m unittest discover -s tests -t .
 
-Com GRAVITY_DIR=/caminho/LUMNA_OS/gravity, o C gerado dos exemplos passa também pelo gcc
-(-Wall -Wextra -Werror), contra os cabeçalhos do Gravity.
+Se houver gcc, pkg-config e as bibliotecas do Gravity, o C gerado dos exemplos também passa pelo
+gcc (-Wall -Wextra -Werror), contra o Gravity que vem com o framework (gravity/).
 """
 
 import glob
@@ -13,12 +13,22 @@ import subprocess
 import tempfile
 import unittest
 
-from gvt.compiler import compile_program
+from gvt.compiler import compile_program, load_icons
 from gvt.errors import GvtError
 from gvt.lexer import tokenize
 from gvt.parser import parse
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+GRAVITY = os.environ.get("GRAVITY_DIR") or os.path.join(ROOT, "gravity")
+
+
+def can_build():
+    if not (shutil.which("gcc") and shutil.which("pkg-config")):
+        return False
+    pkgs = ["wayland-client", "wayland-cursor", "xkbcommon", "cairo", "pangocairo"]
+    return subprocess.run(["pkg-config", "--exists"] + pkgs).returncode == 0
+
+
 EXAMPLES = sorted(glob.glob(os.path.join(ROOT, "examples", "*.gvt")) + glob.glob(os.path.join(ROOT, "tests", "programas", "*.gvt")))
 
 
@@ -210,14 +220,15 @@ class Docs(unittest.TestCase):
 class Examples(unittest.TestCase):
     def test_examples_compile_without_warnings(self):
         self.assertTrue(EXAMPLES)
+        icons = load_icons(GRAVITY)
+        self.assertIsNotNone(icons)
         for path in EXAMPLES:
             with self.subTest(path=os.path.basename(path)):
                 with open(path, encoding="utf-8") as f:
-                    _, warnings = compile_program(parse(f.read()), path)
+                    _, warnings = compile_program(parse(f.read()), path, icons)
                 self.assertEqual(warnings, [])
 
-    @unittest.skipUnless(os.environ.get("GRAVITY_DIR") and shutil.which("gcc") and shutil.which("pkg-config"),
-                         "defina GRAVITY_DIR (e tenha gcc e pkg-config) para compilar de verdade")
+    @unittest.skipUnless(can_build(), "precisa de gcc, pkg-config e das bibliotecas do Gravity")
     def test_build_exe(self):
         with tempfile.TemporaryDirectory() as tmp:
             src = os.path.join(tmp, "teste.gvt")
@@ -228,17 +239,14 @@ class Examples(unittest.TestCase):
             self.assertTrue(os.access(os.path.join(tmp, "teste"), os.X_OK))
 
     def test_missing_gravity_is_explained(self):
-        env = dict(os.environ, GRAVITY_DIR="/nao/existe")
-        r = subprocess.run([os.path.join(ROOT, "bin", "gvt"), "run", os.path.join(ROOT, "examples", "ola.gvt")],
-                           capture_output=True, text=True, env=env)
+        r = subprocess.run([os.path.join(ROOT, "bin", "gvt"), "run", os.path.join(ROOT, "examples", "ola.gvt"),
+                            "--gravity", "/nao/existe"], capture_output=True, text=True)
         self.assertEqual(r.returncode, 1)
-        self.assertIn("não achei o Gravity", r.stderr)
-        self.assertIn("lumna-mobile", r.stderr)
+        self.assertIn("não achei o Gravity em '/nao/existe'", r.stderr)
 
-    @unittest.skipUnless(os.environ.get("GRAVITY_DIR") and shutil.which("gcc") and shutil.which("pkg-config"),
-                         "defina GRAVITY_DIR (e tenha gcc e pkg-config) para passar o C pelo gcc")
+    @unittest.skipUnless(can_build(), "precisa de gcc, pkg-config e das bibliotecas do Gravity")
     def test_generated_c_passes_gcc(self):
-        gdir = os.environ["GRAVITY_DIR"]
+        gdir = GRAVITY
         pkgs = ["wayland-client", "wayland-cursor", "xkbcommon", "cairo", "pangocairo"]
         cflags = subprocess.run(["pkg-config", "--cflags"] + pkgs, capture_output=True, text=True, check=True).stdout.split()
         with tempfile.TemporaryDirectory() as tmp:

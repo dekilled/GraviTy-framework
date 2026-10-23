@@ -1,7 +1,7 @@
 # GraviTy
 
 **GraviTy** é uma linguagem de script para criar interfaces que vira **C** para o
-[Gravity](https://github.com/dekilled/LUMNA_OS/tree/lumna-mobile/gravity), a biblioteca de UI do LUMNA OS.
+[Gravity](gravity/README.md), a biblioteca de UI do LUMNA OS, que vem junto neste repositório.
 Você escreve num arquivo `.gvt`, que se lê como script, e o compilador `gvt` gera o C que você
 escreveria à mão. O gcc/clang compila esse C direto para código de máquina, então não há
 interpretador nem nada rodando por baixo.
@@ -42,12 +42,12 @@ app Ola {
 
 ## Começar
 
-Precisa de `python3` (sem nenhuma biblioteca extra), das dependências do Gravity (`wayland`,
-`wayland-protocols`, `libxkbcommon`, `cairo`, `pango`) e da pasta `gravity/` do LUMNA_OS.
+Precisa de `python3` (sem nenhuma biblioteca extra), de um compilador de C e das bibliotecas do
+Gravity. No Arch:
+`sudo pacman -S --needed gcc make pkgconf wayland wayland-protocols libxkbcommon cairo pango`.
 
 ```sh
-git -C ~/LUMNA_OS checkout lumna-mobile        # o gravity/ só existe nessa branch
-export GRAVITY_DIR=~/LUMNA_OS/gravity
+git clone https://github.com/dekilled/GraviTy-framework && cd GraviTy-framework
 
 bin/gvt run examples/ola.gvt                   # compila e abre (o jeito mais fácil)
 bin/gvt build examples/ola.gvt --exe           # só gera o executável examples/ola
@@ -55,7 +55,7 @@ bin/gvt build examples/ola.gvt                 # só gera o C (examples/ola.c), 
 bin/gvt check examples/*.gvt                   # só procura erros
 
 # os exemplos todos, com CMake
-cmake -B build -DGRAVITY_DIR=$GRAVITY_DIR && cmake --build build && ./build/mixer
+cmake -B build && cmake --build build && ./build/mixer
 ```
 
 Para chamar só `gvt` de qualquer pasta: `ln -s "$PWD/bin/gvt" ~/.local/bin/gvt`.
@@ -63,10 +63,20 @@ Para chamar só `gvt` de qualquer pasta: `ln -s "$PWD/bin/gvt" ~/.local/bin/gvt`
 No seu próprio projeto CMake:
 
 ```cmake
-include(/caminho/GraviTy/cmake/GraviTy.cmake)
-gravity_runtime(/caminho/LUMNA_OS/gravity)
+include(/caminho/GraviTy-framework/cmake/GraviTy.cmake)
 gravity_add_app(meu_app meu_app.gvt)
 ```
+
+## O que tem aqui
+
+| | |
+|---|---|
+| `gvt/`, `bin/gvt` | o compilador da linguagem |
+| `gravity/` | o Gravity: a biblioteca de UI em C (Wayland, Clay, cairo e pango), os componentes e o tema |
+| `cmake/GraviTy.cmake` | para usar em qualquer projeto CMake |
+| `examples/` | `ola`, `ajustes`, e o mixer e a galeria do Gravity em `.gvt` |
+| `docs/` | a documentação |
+| `tests/` | os testes do compilador e a comparação pixel a pixel |
 
 ## Documentação
 
@@ -85,9 +95,8 @@ gravity_add_app(meu_app meu_app.gvt)
 ## Testes
 
 ```sh
-python3 -m unittest discover -s tests -t .                                     # o compilador
-GRAVITY_DIR=/caminho/LUMNA_OS/gravity python3 -m unittest discover -s tests -t .  # + gcc -Werror nos exemplos
-GRAVITY_DIR=/caminho/LUMNA_OS/gravity tests/pixels.sh build                      # pixel a pixel contra o C original
+python3 -m unittest discover -s tests -t .   # o compilador, e o gcc -Werror nos exemplos se houver as bibliotecas
+tests/pixels.sh build                         # pixel a pixel contra o C original
 ```
 
 O `pixels.sh` roda o mixer e a galeria num weston sem tela, tira um print de cada (o original em

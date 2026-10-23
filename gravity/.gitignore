@@ -1,0 +1,6 @@
+*.o
+libgravity.a
+mixer
+galeria
+*-protocol.c
+*-client-protocol.h

@@ -1,15 +1,15 @@
 #!/bin/sh
 # Compara, pixel a pixel, os exemplos em .gvt com os originais em C do Gravity.
 #
-#   cmake -B build -DGRAVITY_DIR=/caminho/LUMNA_OS/gravity && cmake --build build
-#   make -C /caminho/LUMNA_OS/gravity mixer galeria
-#   GRAVITY_DIR=/caminho/LUMNA_OS/gravity tests/pixels.sh build
+#   cmake -B build && cmake --build build
+#   tests/pixels.sh build
 #
 # Precisa de weston (o backend headless e o weston-screenshooter) e do Pillow (python3 -m pip install pillow).
 set -eu
 
 build=${1:-build}
-: "${GRAVITY_DIR:?defina GRAVITY_DIR (a pasta gravity/ do LUMNA_OS)}"
+GRAVITY_DIR=${GRAVITY_DIR:-$(cd "$(dirname "$0")/../gravity" && pwd)}
+make -s -C "$GRAVITY_DIR" mixer galeria  # os originais em C
 tmp=$(mktemp -d)
 export XDG_RUNTIME_DIR="$tmp"
 export WAYLAND_DISPLAY=gvt-pixels

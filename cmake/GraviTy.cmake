@@ -1,7 +1,7 @@
 # GraviTy no CMake: compila .gvt para C e liga ao Gravity.
 #
-#   include(caminho/para/GraviTy/cmake/GraviTy.cmake)
-#   gravity_runtime(/caminho/para/LUMNA_OS/gravity)   # a biblioteca Gravity (libgravity)
+#   include(caminho/para/GraviTy-framework/cmake/GraviTy.cmake)
+#   gravity_runtime()                                 # a biblioteca Gravity (libgravity) que vem com o framework
 #   gravity_add_app(mixer mixer.gvt)                  # um executável a partir de um .gvt
 #   gravity_add_app(ajustes ajustes.gvt extra.c)      # .c a mais entram no mesmo executável
 #
@@ -18,15 +18,19 @@ set(GVT_ROOT "${CMAKE_CURRENT_LIST_DIR}/.." CACHE INTERNAL "a raiz do GraviTy")
 set(GVT_COMPILER "${GVT_ROOT}/bin/gvt" CACHE INTERNAL "o compilador gvt")
 file(GLOB GVT_COMPILER_SOURCES CONFIGURE_DEPENDS "${GVT_ROOT}/gvt/*.py")
 
-# A biblioteca Gravity, compilada a partir das fontes (a pasta gravity/ do LUMNA_OS).
-function(gravity_runtime dir)
+# A biblioteca Gravity, compilada a partir das fontes: a gravity/ do framework, ou outra pasta dada.
+function(gravity_runtime)
 	if(TARGET gravity)
 		return()
+	endif()
+	set(dir "${GVT_ROOT}/gravity")
+	if(ARGC GREATER 0 AND ARGV0)
+		set(dir "${ARGV0}")
 	endif()
 	get_filename_component(dir "${dir}" ABSOLUTE)
 	if(NOT EXISTS "${dir}/src/gravity.h")
 		message(FATAL_ERROR "GraviTy: não encontrei o Gravity em '${dir}' (falta src/gravity.h).\n"
-			"Aponte para a pasta gravity/ do LUMNA_OS: -DGRAVITY_DIR=/caminho/LUMNA_OS/gravity")
+			"Sem argumento, gravity_runtime() usa a pasta gravity/ que vem com o GraviTy-framework.")
 	endif()
 
 	pkg_check_modules(GRAVITY_DEPS REQUIRED IMPORTED_TARGET
@@ -69,7 +73,7 @@ endfunction()
 # Um app a partir de um .gvt (e, se quiser, .c a mais).
 function(gravity_add_app name gvt)
 	if(NOT TARGET gravity)
-		message(FATAL_ERROR "GraviTy: chame gravity_runtime(<pasta do Gravity>) antes de gravity_add_app")
+		gravity_runtime()
 	endif()
 	get_filename_component(src "${gvt}" ABSOLUTE)
 	get_filename_component(base "${gvt}" NAME_WE)

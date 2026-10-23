@@ -1,4 +1,4 @@
-"""Do C gerado ao executável: acha o Gravity, compila a libgravity se precisar e chama o cc.
+"""Do C gerado ao executável: compila a libgravity se precisar e chama o cc.
 
 É o que o `gvt run` e o `gvt build --exe` usam, para ninguém ter que montar a linha do gcc à mão.
 """
@@ -46,29 +46,19 @@ def install_hint():
     return "instale wayland, wayland-protocols, libxkbcommon, cairo e pango (os pacotes -dev/-devel) e o pkg-config"
 
 
-def find_gravity(given, gvt_file):
-    """A pasta gravity/ do LUMNA_OS: --gravity, GRAVITY_DIR, ou um LUMNA_OS por perto."""
+BUNDLED = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "gravity")
+
+
+def find_gravity(given=None):
+    """A pasta do Gravity: a que vem com o GraviTy-framework, ou outra em --gravity / GRAVITY_DIR."""
+    path = given or BUNDLED
+    if os.path.isfile(os.path.join(path, "src", "gravity.h")):
+        return os.path.abspath(path)
     if given:
-        candidates = [given]
-    else:
-        root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        here = os.path.dirname(os.path.abspath(gvt_file))
-        home = os.path.expanduser("~")
-        candidates = []
-        for base in (here, os.path.dirname(here), root, os.path.dirname(root), home):
-            for name in ("LUMNA_OS", "lumna_os", "LUMNA-OS"):
-                candidates.append(os.path.join(base, name, "gravity"))
-            candidates.append(os.path.join(base, "gravity"))
-    for c in candidates:
-        if os.path.isfile(os.path.join(c, "src", "gravity.h")):
-            return os.path.abspath(c)
-    if given:
-        hint = ("aponte para a pasta gravity/ do LUMNA_OS (a que tem src/gravity.h). Ela só existe na branch "
-                "lumna-mobile: git -C LUMNA_OS checkout lumna-mobile")
-        raise NativeError(f"não achei o Gravity em '{given}'", hint)
-    raise NativeError("não achei o Gravity (a biblioteca de UI do LUMNA OS)",
-                      "diga onde ele está: export GRAVITY_DIR=/caminho/LUMNA_OS/gravity  (ou --gravity). "
-                      "A pasta gravity/ só existe na branch lumna-mobile: git -C LUMNA_OS checkout lumna-mobile")
+        raise NativeError(f"não achei o Gravity em '{given}' (falta src/gravity.h)",
+                          "sem --gravity nem GRAVITY_DIR, o gvt usa o Gravity que vem com o framework (a pasta gravity/)")
+    raise NativeError("não achei a pasta gravity/ do framework",
+                      "ela vem junto no repositório GraviTy-framework: clone de novo, ou rode git checkout -- gravity")
 
 
 def check_tools():

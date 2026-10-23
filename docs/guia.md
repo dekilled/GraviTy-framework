@@ -39,17 +39,9 @@ Pronto, a janela abre. O `gvt run` faz tudo sozinho: transforma o `.gvt` em C, c
 `libgravity` na primeira vez, chama o compilador de C e abre o app. Para só gerar o executável,
 sem abrir, use `gvt build ajustes.gvt --exe`.
 
-Na primeira vez, o `gvt` precisa saber onde está o Gravity, que é a pasta `gravity/` do LUMNA_OS
-(**ela só existe na branch `lumna-mobile`**):
-
-```sh
-git -C ~/LUMNA_OS checkout lumna-mobile
-export GRAVITY_DIR=~/LUMNA_OS/gravity     # ponha no ~/.bashrc para não repetir
-```
-
-Se o LUMNA_OS estiver na sua pasta pessoal ou ao lado do projeto, o `gvt` acha sozinho. Se
-faltar alguma coisa (o Gravity, uma biblioteca, uma sessão Wayland), ele diz o que é e como
-instalar.
+O Gravity vem junto com o framework, na pasta `gravity/`, então não há nada para configurar. Se
+faltar alguma coisa no seu sistema (uma biblioteca, uma sessão Wayland), o `gvt` diz o que é e
+como instalar.
 
 > **E o `gvt build ajustes.gvt` sozinho?** Ele só gera o `ajustes.c`, que é o código-fonte em C.
 > Um `.c` não roda: ainda precisa ser compilado e ligado à `libgravity`. Isso é o que o `gvt run`
@@ -201,8 +193,7 @@ text("{temperatura:.1} °C")     // uma casa decimal
 cmake_minimum_required(VERSION 3.16)
 project(meus_apps C)
 
-include(/caminho/GraviTy/cmake/GraviTy.cmake)
-gravity_runtime(/caminho/LUMNA_OS/gravity)
+include(/caminho/GraviTy-framework/cmake/GraviTy.cmake)
 gravity_add_app(ajustes ajustes.gvt)
 ```
 
