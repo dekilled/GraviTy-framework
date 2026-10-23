@@ -28,6 +28,10 @@ bool gv_premido(Clay_ElementId id) {
 	return gv__entrada.ativo == id.id && gv__entrada.baixo;
 }
 
+bool gv_segurado(Clay_ElementId id) {
+	return gv__entrada.ativo == id.id && gv__entrada.baixo;
+}
+
 bool gv_tocado(Clay_ElementId id) {
 	candidato(id);
 	return gv__entrada.soltou && gv__entrada.ativo == id.id && Clay_PointerOver(id);

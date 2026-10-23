@@ -154,18 +154,32 @@ def spec(pos=(), flags=(), props=(), events=(), children=False):
     return {"pos": list(pos), "flags": set(flags), "props": set(props) | set(pos), "events": set(events), "children": children}
 
 
+# entrar/sair e apertar/soltar: o GraviTy lembra o estado do quadro anterior e avisa quando muda
+POINTER_EVENTS = {"on_hover", "on_leave", "on_press", "on_release"}
+TAP_EVENTS = {"on_tap"} | POINTER_EVENTS
+CHANGE_EVENTS = {"on_change"} | POINTER_EVENTS
+
+# nomes de outros lugares (o DOM, outros frameworks) e o que usar no GraviTy
+EVENT_HINTS = {
+    "on_mouseover": "on_hover", "on_mouseenter": "on_hover", "on_enter": "on_hover",
+    "on_mouseout": "on_leave", "on_mouseleave": "on_leave", "on_exit": "on_leave",
+    "on_click": "on_tap", "on_touch": "on_tap",
+    "on_mousedown": "on_press", "on_down": "on_press", "on_touchstart": "on_press",
+    "on_mouseup": "on_release", "on_up": "on_release", "on_touchend": "on_release",
+}
+
 SPECS = {
-    "view": spec(flags=CONTAINER_FLAGS, props=CONTAINER_PROPS, events={"on_tap"}, children=True),
-    "row": spec(flags=CONTAINER_FLAGS, props=CONTAINER_PROPS, events={"on_tap"}, children=True),
-    "column": spec(flags=CONTAINER_FLAGS, props=CONTAINER_PROPS, events={"on_tap"}, children=True),
-    "box": spec(flags=CONTAINER_FLAGS, props=CONTAINER_PROPS, events={"on_tap"}, children=True),
-    "card": spec(flags=CONTAINER_FLAGS, props=CONTAINER_PROPS, events={"on_tap"}, children=True),
-    "text": spec(pos=["text"], flags=CONTAINER_FLAGS, props={"size", "style", "color", "weight"} | CONTAINER_PROPS, events={"on_tap"}),
+    "view": spec(flags=CONTAINER_FLAGS, props=CONTAINER_PROPS, events=TAP_EVENTS, children=True),
+    "row": spec(flags=CONTAINER_FLAGS, props=CONTAINER_PROPS, events=TAP_EVENTS, children=True),
+    "column": spec(flags=CONTAINER_FLAGS, props=CONTAINER_PROPS, events=TAP_EVENTS, children=True),
+    "box": spec(flags=CONTAINER_FLAGS, props=CONTAINER_PROPS, events=TAP_EVENTS, children=True),
+    "card": spec(flags=CONTAINER_FLAGS, props=CONTAINER_PROPS, events=TAP_EVENTS, children=True),
+    "text": spec(pos=["text"], flags=CONTAINER_FLAGS, props={"size", "style", "color", "weight"} | CONTAINER_PROPS, events=TAP_EVENTS),
     "icon": spec(pos=["name", "size"], props={"color"}),
-    "button": spec(pos=["text"], props={"icon", "style"}, events={"on_tap"}),
-    "round_button": spec(pos=["icon"], props={"size", "on", "danger"}, events={"on_tap"}),
-    "slider": spec(pos=["value"], props={"track", "knob"}, events={"on_change"}),
-    "toggle": spec(pos=["value"], events={"on_change"}),
+    "button": spec(pos=["text"], props={"icon", "style"}, events=TAP_EVENTS),
+    "round_button": spec(pos=["icon"], props={"size", "on", "danger"}, events=TAP_EVENTS),
+    "slider": spec(pos=["value"], props={"track", "knob"}, events=CHANGE_EVENTS),
+    "toggle": spec(pos=["value"], events=CHANGE_EVENTS),
     "separator": spec(pos=["length"], flags={"vertical", "horizontal"}),
     "spacer": spec(pos=["size"]),
 }
@@ -905,6 +919,15 @@ class Compiler:
             raise GvtError(st.pos, "não dá para trocar uma lista inteira de uma vez", "mude item a item: lista[i] = ...")
         if st.op == "=":
             value, _ = self.expr(st.value, t, "o novo valor")
+            if self.in_state(st.target):
+                # um texto montado ({ }) vive só um quadro: o estado do app guarda uma cópia dele
+                if t.kind == "string":
+                    self.helpers.add("keep")
+                    return [f"gvt_guardar(&{code}, {value});"]
+                if t.kind == "record" and any(ft.kind == "string" for _, ft in t.rec.fields):
+                    self.helpers.add("keep")
+                    return [f"{code} = {value};"] + [f"gvt_guardar(&{code}.{field_name(n)}, {code}.{field_name(n)});"
+                                                     for n, ft in t.rec.fields if ft.kind == "string"]
             return [f"{code} = {value};"]
         if not t.numeric:
             raise GvtError(st.pos, f"{st.op} é para números, e isto é {t.describe()}")
@@ -912,6 +935,19 @@ class Compiler:
         if t == INT and st.op == "/=":
             raise GvtError(st.pos, "/= num int perderia as casas decimais", f"use {code} = int({code} / ...)")
         return [f"{code} {st.op} {value};"]
+
+    def in_state(self, e):
+        """Se o alvo de uma atribuição mora no estado do app (que dura mais do que o quadro)."""
+        if isinstance(e, S.Name):
+            sym = self.lookup(e.name, use=False)
+            return sym is not None and (sym.ptr or self.globals.get(e.name) is sym)
+        if isinstance(e, S.Member):
+            if isinstance(e.obj, S.Name) and e.obj.name == "theme" and not self.lookup("theme", use=False):
+                return False
+            return self.in_state(e.obj)
+        if isinstance(e, S.Index):
+            return self.in_state(e.obj)
+        return False
 
     def lvalue(self, e):
         """(código, tipo, se dá para mudar, porque não)"""
@@ -1082,8 +1118,7 @@ class Compiler:
         events = {}
         for ev in el.events:
             if ev.name not in sp["events"]:
-                ok = ", ".join(sorted(sp["events"])) or "nenhum"
-                raise GvtError(ev.pos, f"{el.kind} não tem o evento {ev.name}", f"eventos de {el.kind}: {ok}")
+                raise GvtError(ev.pos, f"{el.kind} não tem o evento {ev.name}", self.event_hint(el.kind, ev.name))
             if ev.name in events:
                 raise GvtError(ev.pos, f"{ev.name} aparece duas vezes")
             events[ev.name] = ev
@@ -1091,6 +1126,18 @@ class Compiler:
             raise GvtError(el.body[0].pos, f"{el.kind} não tem filhos",
                            "para um botão com conteúdo próprio use row #id (...) { ... on_tap { } }" if el.kind == "button" else None)
         return named, flags, events
+
+    def event_hint(self, kind, name):
+        events = SPECS[kind]["events"]
+        ok = ", ".join(sorted(events)) or "nenhum"
+        if name in EVENT_HINTS and EVENT_HINTS[name] in events:
+            return f"no GraviTy, {name} se chama {EVENT_HINTS[name]}"
+        if name == "on_change":
+            return f"{kind} não muda de valor: on_change é do slider e do toggle. Eventos de {kind}: {ok}"
+        if name == "on_select":
+            return "selecionar é um estado seu: var selected = 0 e on_tap { selected = i }; depois, if selected == i"
+        close = suggest(name, events)
+        return close or f"eventos de {kind}: {ok}"
 
     def prop_hint(self, kind, name):
         """A dica de uma propriedade que não existe: um nome parecido, ou o elemento que a tem."""
@@ -1145,6 +1192,30 @@ class Compiler:
         self.event_depth -= 1
         return [f"if ({prefix}) {{"] + indent(body) + ["}"]
 
+    def pointer_events(self, events, ctx, container=False):
+        """on_hover/on_leave e on_press/on_release: comparam o estado de agora com o do quadro anterior.
+
+        Devolve (antes, depois): o código que vai antes do elemento e o que vai depois dele. Num
+        contêiner, o apertar só se confere depois dos filhos: o toque é do último elemento declarado
+        debaixo do dedo, e um botão lá dentro fica com ele.
+        """
+        before, after = [], []
+        for bit, (on, off, test) in enumerate((("on_hover", "on_leave", "gv_por_cima"), ("on_press", "on_release", "gv_premido"))):
+            if on not in events and off not in events:
+                continue
+            self.helpers.add("edges")
+            var = self.tmp("m")
+            if bit == 1 and container:
+                before.append(f"(void)gv_premido({ctx.idvar}); /* candidata-se ao toque antes dos filhos */")
+                target = after
+                test = "gv_segurado"
+            else:
+                target = before
+            target.append(f"int {var} = gvt_mudou({ctx.idvar}.id, {bit}, {test}({ctx.idvar}));")
+            target += self.events_code(events, on, ctx, f"{var} > 0")
+            target += self.events_code(events, off, ctx, f"{var} < 0")
+        return before, after
+
     def container(self, el, named, flags, events, inner=None):
         kind = el.kind
         direction = "column" if kind in ("column", "card", "view") else "row"
@@ -1155,7 +1226,8 @@ class Compiler:
             direction = d.name
         ctx = self.open_elem(direction)
         decl = self.layout(el, named, flags, direction, ctx, kind)
-        tap = self.events_code(events, "on_tap", ctx, f"gv_tocado({ctx.idvar})")
+        pointer_before, pointer_after = self.pointer_events(events, ctx, container=True)
+        tap = pointer_before + self.events_code(events, "on_tap", ctx, f"gv_tocado({ctx.idvar})")
         if inner is not None:
             body = inner()
         else:
@@ -1193,7 +1265,7 @@ class Compiler:
                 out.append("}) {")
         out += indent(body)
         out.append("}")
-        return out
+        return out + pointer_after
 
     def layout(self, el, named, flags, direction, ctx, kind):
         """As propriedades de um contêiner -> {caminho na Clay_ElementDeclaration: código C}."""
@@ -1396,6 +1468,9 @@ class Compiler:
         finally:
             self.elems.pop()
         out = [self.element_id(el, ctx)]
+        self.elems.append(ctx)
+        out += self.pointer_events(events, ctx)[0]
+        self.elems.pop()
         ev = events.get(event_name)
         if not ev:
             return out + [f"{code};"]
@@ -1533,7 +1608,11 @@ class Compiler:
                 else:
                     if t.kind in ("list", "record"):
                         raise GvtError(d.value.pos, "o valor inicial de uma lista ou registro global tem que ser constante")
-                    self.late_init.append(f"s.{cname} = {self.init_value(d.value, t)};")
+                    if t.kind == "string":
+                        self.helpers.add("keep")
+                        self.late_init.append(f"gvt_guardar(&s.{cname}, {self.init_value(d.value, t)});")
+                    else:
+                        self.late_init.append(f"s.{cname} = {self.init_value(d.value, t)};")
                 self.globals[d.name] = Symbol(f"s.{cname}", t, d.mutable)
         self.scopes.pop()
 
@@ -1647,7 +1726,7 @@ class Compiler:
         out = [f"/* Gerado pelo GraviTy a partir de {os.path.basename(self.source_name)}: não edite à mão,"
                " mude o .gvt e compile de novo. */",
                "#include <math.h>", "#include <stdbool.h>", "#include <stdint.h>", "#include <stdio.h>",
-               "#include <string.h>"]
+               "#include <stdlib.h>", "#include <string.h>"]
         if self.needs_xkb:
             out.append("#include <xkbcommon/xkbcommon-keysyms.h>")
         out += ['', '#include "gravity.h"', "",
@@ -1759,6 +1838,37 @@ def helper_code(names):
         "maxi": "static inline int gvt_maxi(int a, int b) { return a > b ? a : b; }",
         "clampf": "static inline float gvt_clampf(float v, float lo, float hi) { return v < lo ? lo : v > hi ? hi : v; }",
         "clampi": "static inline int gvt_clampi(int v, int lo, int hi) { return v < lo ? lo : v > hi ? hi : v; }",
+        "edges": "/* o estado de cada elemento no quadro anterior (dentro, apertado), para on_hover, on_leave,\n"
+                 " * on_press e on_release: +1 quando liga, -1 quando desliga, 0 quando não mudou */\n"
+                 "static struct {\n\tuint32_t id;\n\tuint8_t bits;\n} gvt_estados[512];\n\n"
+                 "static int gvt_mudou(uint32_t id, int bit, bool agora) {\n"
+                 "\tuint32_t i = id % 512;\n"
+                 "\tfor (int n = 0; n < 512 && gvt_estados[i].id != id && gvt_estados[i].id != 0; n++) {\n"
+                 "\t\ti = (i + 1) % 512;\n\t}\n"
+                 "\tgvt_estados[i].id = id;\n"
+                 "\tbool antes = gvt_estados[i].bits & (1u << bit);\n"
+                 "\tif (agora) {\n\t\tgvt_estados[i].bits |= (uint8_t)(1u << bit);\n\t} else {\n"
+                 "\t\tgvt_estados[i].bits &= (uint8_t)~(1u << bit);\n\t}\n"
+                 "\treturn agora == antes ? 0 : agora ? 1 : -1;\n}",
+        "keep": "/* os textos guardados no estado do app: cada lugar (uma var, um campo) tem a sua cópia, que dura\n"
+                " * até o próximo valor (um texto com { } é montado no quadro e some no fim dele) */\n"
+                "static struct {\n\tconst char **lugar;\n\tchar *texto;\n\tsize_t tamanho;\n} gvt_textos[256];\n\n"
+                "static void gvt_guardar(const char **lugar, const char *valor) {\n"
+                "\tint k = -1;\n"
+                "\tfor (int i = 0; i < 256; i++) {\n"
+                "\t\tif (gvt_textos[i].lugar == lugar) {\n\t\t\tk = i;\n\t\t\tbreak;\n\t\t}\n"
+                "\t\tif (k < 0 && !gvt_textos[i].lugar) {\n\t\t\tk = i;\n\t\t}\n\t}\n"
+                "\tif (!valor) {\n\t\tvalor = \"\";\n\t}\n"
+                "\tsize_t n = strlen(valor) + 1;\n"
+                "\tif (k < 0) {\n\t\tchar *copia = malloc(n);\n\t\tif (copia) {\n\t\t\tmemcpy(copia, valor, n);\n\t\t\t*lugar = copia;\n\t\t}\n\t\treturn;\n\t}\n"
+                "\tif (valor == gvt_textos[k].texto) {\n\t\t*lugar = valor;\n\t\treturn;\n\t}\n"
+                "\tif (gvt_textos[k].tamanho < n) {\n"
+                "\t\tchar *maior = realloc(gvt_textos[k].texto, n);\n"
+                "\t\tif (!maior) {\n\t\t\treturn;\n\t\t}\n"
+                "\t\tgvt_textos[k].texto = maior;\n\t\tgvt_textos[k].tamanho = n;\n\t}\n"
+                "\tmemmove(gvt_textos[k].texto, valor, n);\n"
+                "\tgvt_textos[k].lugar = lugar;\n"
+                "\t*lugar = gvt_textos[k].texto;\n}",
         "has_arg": "static bool gvt_has_arg(const char *arg) {\n\tfor (int i = 1; i < gvt_argc; i++) {\n"
                    "\t\tif (strcmp(gvt_argv[i], arg) == 0) {\n\t\t\treturn true;\n\t\t}\n\t}\n\treturn false;\n}",
     }

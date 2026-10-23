@@ -91,6 +91,8 @@ arredonda) ou `int(x)` (que corta as casas).
 
 - Dentro de `{ }` vai qualquer valor: `int`, `float`, `bool`, `string` ou uma chamada de função.
 - `+` **não** junta textos. Use a interpolação: `"{a} {b}"`.
+- Um texto com `{ }` guardado numa variável do app (`status = "volume {v}"`) é copiado: ele continua
+  valendo nos quadros seguintes, até você dar outro valor.
 - `==` e `!=` comparam o conteúdo: `if name == "Emma"`.
 
 ## Cores

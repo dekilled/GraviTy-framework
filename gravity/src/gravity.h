@@ -148,6 +148,9 @@ Clay_Color gv_anim_cor(uint32_t chave, Clay_Color alvo, int duracao_ms);
 
 bool gv_por_cima(Clay_ElementId id);     /* o ponteiro (ou o dedo) está sobre ele */
 bool gv_premido(Clay_ElementId id);      /* começou nele e ainda não soltou */
+/* O mesmo que gv_premido, mas só consulta: não se candidata ao toque. Serve para olhar um pai
+ * depois dos filhos (quem fica com o toque é o último declarado debaixo do dedo). */
+bool gv_segurado(Clay_ElementId id);
 bool gv_tocado(Clay_ElementId id);       /* começou e acabou nele: um clique, um toque */
 Clay_BoundingBox gv_caixa(Clay_ElementId id);
 /* A tecla carregada neste quadro (um keysym do xkbcommon), ou 0. */

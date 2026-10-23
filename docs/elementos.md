@@ -19,11 +19,47 @@ Tudo é opcional menos o tipo: `spacer`, `text("oi")`, `row (gap: 8) { ... }`,
   sozinho, então `#nome` basta.
 - **Propriedades** são `nome: valor`. Algumas são **palavras soltas** (`grow`, `center`...).
   Alguns elementos aceitam o primeiro valor sem nome: `text("oi")` é `text(text: "oi")`.
-- **Eventos** (`on_tap`, `on_change`) ficam no corpo, em qualquer lugar entre os filhos. O que
+- **Eventos** (`on_tap`, `on_hover`...) ficam no corpo, em qualquer lugar entre os filhos. O que
   está dentro deles muda o estado. Eles não desenham: elementos dentro de um evento são erro.
 
 Dentro das propriedades e do corpo de um elemento, `hovered` (o ponteiro está em cima) e `pressed`
 (foi tocado e ainda não soltou) falam **desse** elemento.
+
+## Eventos
+
+| evento | quando roda | quem tem |
+|---|---|---|
+| `on_tap` | um toque ou clique: começou **e** terminou no elemento | contêineres, `text` com caixa, `button`, `round_button` |
+| `on_hover` | o ponteiro (ou o dedo) **entrou** no elemento | todos os de cima, `slider` e `toggle` |
+| `on_leave` | o ponteiro **saiu** do elemento | os mesmos |
+| `on_press` | o toque **começou** no elemento (o botão do mouse desceu) | os mesmos |
+| `on_release` | o toque **terminou** (soltou), dentro ou fora do elemento | os mesmos |
+| `on_change` | o valor mudou | `slider` e `toggle` |
+
+```
+button #inc ("Increase", icon: "plus") {
+    on_tap { count += 1 }
+    on_hover { status = "em cima do botão" }
+    on_leave { status = "" }
+}
+slider #volume (value: volume) {
+    on_press { dragging = true }
+    on_release { dragging = false }
+}
+```
+
+- `on_hover`/`on_leave` e `on_press`/`on_release` rodam **uma vez** na mudança. Para algo que
+  vale **enquanto** o ponteiro está em cima, use o estado: `bg: hovered ? "#333" : "#222"`. É mais
+  simples e não precisa de variável.
+- Um clique completo dispara, na ordem: `on_press`, `on_release` e `on_tap`.
+- O toque é de quem está **mais por dentro**: apertar um `button` dentro de um `row` dispara o
+  `on_press` do botão, e não o do `row`. Já o `on_hover` vale para os dois, porque o ponteiro está
+  em cima de ambos.
+- Com toque (celular), `on_hover` roda quando o dedo encosta e `on_leave` quando ele sai.
+- Se um elemento some da tela (dentro de um `if`) com o ponteiro em cima, o `on_leave` dele roda
+  quando ele voltar a aparecer.
+- Nomes de outros lugares (`on_click`, `on_mouseover`, `on_mouseout`...) dão erro com o nome
+  certo na dica.
 
 ---
 
@@ -66,7 +102,8 @@ Propriedades (as mesmas para todos; detalhes em [Layout](layout.md)):
 | `scroll` | `vertical`, `horizontal`, `both` | rola com o dedo, o mouse e a roda |
 | `direction` | `row`, `column` | troca a direção (útil no `card` e no `box`) |
 
-Evento: **`on_tap`**, quando o elemento é tocado (o toque começa e termina nele).
+Eventos: **`on_tap`**, quando o elemento é tocado (o toque começa e termina nele), e os de
+ponteiro (`on_hover`, `on_leave`, `on_press`, `on_release`), [descritos acima](#eventos).
 
 ```
 row #chip (height: 50, padding_x: 16, gap: 10, align: center, radius: 25,
@@ -137,7 +174,7 @@ button #more (icon: "dots", style: plain) { ... }
 | `icon` | o nome de um ícone | sem ícone |
 | `style` | `filled` (cheio, de acento), `outline` (só a borda), `plain` (só o conteúdo) | `filled` |
 
-Precisa de texto, de ícone ou dos dois. Evento: **`on_tap`**.
+Precisa de texto, de ícone ou dos dois. Eventos: **`on_tap`** e os [de ponteiro](#eventos).
 
 O `button` **não tem `size`**: ele tem 52 px de altura e **estica para ocupar a largura que
 tiver**. Para ele ficar mais estreito, ponha numa caixa com a largura que quiser:
@@ -184,7 +221,7 @@ round_button #mute (icon: muted ? "mute" : "volume", on: muted, danger: true) { 
 | `on` | `bool`: pinta como ativo | `false` |
 | `danger` | `bool`: o "ativo" fica vermelho | `false` |
 
-Evento: **`on_tap`**.
+Eventos: **`on_tap`** e os [de ponteiro](#eventos).
 
 ---
 

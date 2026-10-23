@@ -195,6 +195,80 @@ class Lint(unittest.TestCase):
         self.assertIn("wifi", warnings[0][2])
 
 
+class PointerEvents(unittest.TestCase):
+    def test_events_compile_to_state_changes(self):
+        code, _ = build(app('''        button #b ("x") {
+            on_hover { n += 1 }
+            on_leave { n -= 1 }
+            on_press { n += 10 }
+            on_release { n -= 10 }
+        }
+        row #r (height: 40) {
+            on_hover { n += 100 }
+            text("a")
+        }''', "    var n = 0"))
+        self.assertIn("gvt_mudou(_e", code)
+        self.assertIn(", 0, gv_por_cima(", code)
+        self.assertIn(", 1, gv_premido(", code)
+        self.assertEqual(code.count("gvt_mudou(_e"), 3)
+
+    def test_container_press_is_checked_after_the_children(self):
+        code, _ = build(app('        row #r (height: 60) {\n            on_press { n += 1 }\n            button #b ("x")\n        }', "    var n = 0"))
+        self.assertLess(code.index("(void)gv_premido("), code.index("gv_botao("))
+        self.assertLess(code.index("gv_botao("), code.index("gv_segurado("))
+
+    def test_event_names_from_elsewhere_get_a_hint(self):
+        for name, hint in (("on_mouseover", "on_hover"), ("on_mouseout", "on_leave"), ("on_click", "on_tap"),
+                           ("on_change", "slider"), ("on_select", "selected")):
+            with self.subTest(name=name):
+                with self.assertRaises(GvtError) as ctx:
+                    build(app(f'        button #b ("x") {{ {name} {{ quit() }} }}'))
+                self.assertIn(hint, ctx.exception.hint)
+
+    def test_texts_kept_in_state_are_copied(self):
+        code, _ = build(app('        button #b ("x") { on_tap { status = "agora {n}"; local = "a {n}" } }\n        text(status)',
+                            '    var status = "parado"\n    var n = 1') .replace("view {", "view {\n        var local = \"\"", 1))
+        self.assertIn('gvt_guardar(&s.status, gv_fmt("agora %d", s.n).chars);', code)
+        self.assertIn('local = gv_fmt("a %d", s.n).chars;', code)
+
+    @unittest.skipUnless(shutil.which("gcc"), "precisa de gcc")
+    def test_helpers_in_c(self):
+        """gvt_mudou e gvt_guardar, compilados e rodados de verdade."""
+        from gvt.compiler import helper_code
+        test = "\n".join(["#include <stdbool.h>", "#include <stdint.h>", "#include <stdio.h>", "#include <stdlib.h>",
+                          "#include <string.h>", *helper_code({"edges", "keep"}), r'''
+int main(void) {
+	/* fora, entrou, ficou, saiu, ficou fora */
+	int seq[] = { gvt_mudou(7, 0, false), gvt_mudou(7, 0, true), gvt_mudou(7, 0, true), gvt_mudou(7, 0, false), gvt_mudou(7, 0, false) };
+	int want[] = { 0, 1, 0, -1, 0 };
+	for (int i = 0; i < 5; i++) if (seq[i] != want[i]) return 10 + i;
+	/* o bit 1 (apertado) e outro elemento não se misturam com o bit 0 */
+	if (gvt_mudou(7, 1, true) != 1 || gvt_mudou(7, 0, false) != 0 || gvt_mudou(8, 0, true) != 1) return 20;
+	/* um texto guardado sobrevive ao buffer de onde veio */
+	const char *status = "parado";
+	char quadro[32];
+	snprintf(quadro, sizeof quadro, "valor %d", 42);
+	gvt_guardar(&status, quadro);
+	memset(quadro, 'x', sizeof quadro - 1);
+	if (strcmp(status, "valor 42") != 0) return 30;
+	gvt_guardar(&status, "um texto bem maior do que o primeiro");
+	if (strcmp(status, "um texto bem maior do que o primeiro") != 0) return 31;
+	gvt_guardar(&status, status);
+	if (strcmp(status, "um texto bem maior do que o primeiro") != 0) return 32;
+	return 0;
+}
+'''])
+        with tempfile.TemporaryDirectory() as tmp:
+            src = os.path.join(tmp, "t.c")
+            with open(src, "w") as f:
+                f.write(test)
+            r = subprocess.run(["gcc", "-std=c11", "-Wall", "-Wextra", "-Werror", "-fsanitize=address,undefined",
+                                "-o", os.path.join(tmp, "t"), src], capture_output=True, text=True)
+            self.assertEqual(r.returncode, 0, r.stderr)
+            r = subprocess.run([os.path.join(tmp, "t")], capture_output=True, text=True)
+            self.assertEqual(r.returncode, 0, r.stderr)
+
+
 class Scroll(unittest.TestCase):
     def test_scroll_offset_is_read_with_the_element_open(self):
         code, _ = build(app("        card #c (height: 100, scroll: vertical) { text(\"a\") }\n        column #d (height: 100, scroll: vertical) { text(\"b\") }"))

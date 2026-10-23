@@ -21,6 +21,8 @@ Antes disso, uma gramática TextMate simples já dá as cores no VS Code e no Gi
 
 ## A linguagem
 
+- **Mais eventos**: `on_long_press` (segurar), `on_double_tap`, `on_scroll` e gestos (deslizar,
+  pinça), conforme o Gravity ganhar suporte a eles.
 - **Componentes com filhos**: `fn painel(title: string) { card { ...; slot } }` para encaixar
   conteúdo dentro de uma `fn`.
 - **Listas que crescem**: `push`, `remove` e `clear`, para listas de verdade (notificações,
