@@ -139,9 +139,21 @@ button #more (icon: "dots", style: plain) { ... }
 
 Precisa de texto, de ícone ou dos dois. Evento: **`on_tap`**.
 
-O `button` **não tem `size`**: ele tem o tamanho do Gravity (52 px de altura, e a largura do
-texto). Para um botão redondo com tamanho, use o [`round_button`](#round_button). Para um botão
-com tamanho e conteúdo próprios, use um contêiner:
+O `button` **não tem `size`**: ele tem 52 px de altura e **estica para ocupar a largura que
+tiver**. Para ele ficar mais estreito, ponha numa caixa com a largura que quiser:
+
+```
+box (width: 200) {                 // ou width: "50%"
+    button #ok ("Ok", icon: "check") { on_tap { ... } }
+}
+row (grow, gap: 10) {              // dois numa linha dividem o espaço
+    button #no ("Cancelar", style: outline) { on_tap { ... } }
+    button #yes ("Ok", icon: "check") { on_tap { ... } }
+}
+```
+
+Para um botão redondo com tamanho, use o [`round_button`](#round_button). Para um botão com
+altura e conteúdo próprios, use um contêiner:
 
 ```
 row #big (height: 64, padding_x: 24, gap: 10, align: center, radius: 32, bg: accent) {
