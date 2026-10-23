@@ -81,7 +81,8 @@ class Errors(unittest.TestCase):
         (app('        text("v = " + v)', "    var v = 0.5"), 4, 21, "não dá para usar + com textos", "interpolação"),
         (app('        texto("oi")'), 4, 9, "função desconhecida: 'texto'", "text"),
         (app('        row (gorw) { text("a") }'), 4, 14, "row não conhece 'gorw'", "grow"),
-        (app('        button #b ("x", size: 52)'), 4, 25, "button não tem a propriedade 'size'", "round_button"),
+        (app('        button #b ("x", size: 52)'), 4, 25, "button não tem a propriedade 'size'", "text_size"),
+        (app('        text("x", text_size: 20)'), 4, 19, "text não tem a propriedade 'text_size'", "'size'"),
         (app('        icon("x", gap: 4)'), 4, 19, "icon não tem a propriedade 'gap'", "existe em row"),
         (app('        button #x ("ok") { on_tap { text("clicou") } }'), 4, 37, "não pode ficar dentro de um evento", None),
         (app('        text("x", color: theme.acent)'), 4, 31, "o tema não tem 'acent'", "accent"),
@@ -176,6 +177,21 @@ class Codegen(unittest.TestCase):
         code, _ = build(app('        text("x")', "    var default = 1\n    var int = 2"))
         self.assertIn("int default_;", code)
         self.assertIn("int int_;", code)
+
+
+class ButtonOptions(unittest.TestCase):
+    def test_plain_button_stays_gv_botao(self):
+        code, _ = build(app('        button #b ("x", style: outline)'))
+        self.assertIn('gv_botao(_e', code)
+        self.assertNotIn("gv_botao_ex", code)
+
+    def test_options_start_from_the_style_default(self):
+        code, _ = build(app('        button #b ("x", icon: "plus", style: outline, icon_size: 30, text_size: 20, width: 120, height: 64, bg: "#16a34a", color: white, weight: bold)'))
+        self.assertIn("= gv_botao_padrao(GV_BOTAO_CONTORNO);", code)
+        for line in (".tamanho_icone = 30;", ".tamanho_texto = 20;", ".largura = CLAY_SIZING_FIXED(120);", ".altura = 64;",
+                     ".fundo = ((Clay_Color){ 22, 163, 74, 255 });", ".peso = GV_PESO_NEGRITO;"):
+            self.assertIn(line, code)
+        self.assertRegex(code, r'gv_botao_ex\(_e\d+, "plus", "x", &_o\d+\)')
 
 
 class Lint(unittest.TestCase):

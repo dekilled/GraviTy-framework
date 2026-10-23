@@ -166,6 +166,28 @@ enum gv_estilo_botao {
 
 /* Um botão com ícone e/ou texto (NULL num deles tira-o). Devolve verdadeiro no toque. */
 bool gv_botao(Clay_ElementId id, const char *icone, const char *texto, enum gv_estilo_botao estilo);
+
+/* O botão com tudo à escolha. Comece do padrão de um estilo e mude o que quiser:
+ *   gv_botao_opcoes o = gv_botao_padrao(GV_BOTAO_CHEIO);
+ *   o.tamanho_texto = 18;
+ *   o.largura = CLAY_SIZING_FIXED(160);
+ *   if (gv_botao_ex(CLAY_ID("ok"), "check", "Ok", &o)) { ... }
+ * O que não cabe na largura é cortado (o botão não vaza para cima dos vizinhos). */
+typedef struct gv_botao_opcoes {
+	float tamanho_icone, tamanho_texto;
+	enum gv_peso peso;
+	Clay_SizingAxis largura;  /* padrão: estica para ocupar o espaço */
+	float altura;
+	float margem;             /* o espaço dos lados, por dentro */
+	float espaco;             /* entre o ícone e o texto */
+	float raio;
+	Clay_Color fundo;         /* transparente: só acende quando o ponteiro passa */
+	Clay_Color conteudo;      /* o texto e o ícone */
+	Clay_Color borda;         /* transparente: sem borda */
+} gv_botao_opcoes;
+
+gv_botao_opcoes gv_botao_padrao(enum gv_estilo_botao estilo);
+bool gv_botao_ex(Clay_ElementId id, const char *icone, const char *texto, const gv_botao_opcoes *opcoes);
 /* Um botão redondo só com ícone; "ligado" pinta-o como activo (perigo: em vermelho). */
 bool gv_botao_redondo(Clay_ElementId id, const char *icone, float tamanho, bool ligado, bool perigo);
 /* Um deslizante de 0 a 1. Devolve verdadeiro quando o valor mudou neste quadro. */

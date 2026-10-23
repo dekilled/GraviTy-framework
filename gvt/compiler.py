@@ -154,6 +154,14 @@ def spec(pos=(), flags=(), props=(), events=(), children=False):
     return {"pos": list(pos), "flags": set(flags), "props": set(props) | set(pos), "events": set(events), "children": children}
 
 
+# as propriedades do button que viram gv_botao_opcoes: nome -> (campo, tipo)
+BUTTON_OPTIONS = {
+    "icon_size": ("tamanho_icone", "number"), "text_size": ("tamanho_texto", "number"), "weight": ("peso", "weight"),
+    "width": ("largura", "sizing"), "height": ("altura", "number"), "padding_x": ("margem", "number"),
+    "gap": ("espaco", "number"), "radius": ("raio", "number"), "bg": ("fundo", "color"),
+    "color": ("conteudo", "color"), "border_color": ("borda", "color"),
+}
+
 # entrar/sair e apertar/soltar: o GraviTy lembra o estado do quadro anterior e avisa quando muda
 POINTER_EVENTS = {"on_hover", "on_leave", "on_press", "on_release"}
 TAP_EVENTS = {"on_tap"} | POINTER_EVENTS
@@ -176,7 +184,7 @@ SPECS = {
     "card": spec(flags=CONTAINER_FLAGS, props=CONTAINER_PROPS, events=TAP_EVENTS, children=True),
     "text": spec(pos=["text"], flags=CONTAINER_FLAGS, props={"size", "style", "color", "weight"} | CONTAINER_PROPS, events=TAP_EVENTS),
     "icon": spec(pos=["name", "size"], props={"color"}),
-    "button": spec(pos=["text"], props={"icon", "style"}, events=TAP_EVENTS),
+    "button": spec(pos=["text"], props={"icon", "style"} | set(BUTTON_OPTIONS), events=TAP_EVENTS),
     "round_button": spec(pos=["icon"], props={"size", "on", "danger"}, events=TAP_EVENTS),
     "slider": spec(pos=["value"], props={"track", "knob"}, events=CHANGE_EVENTS),
     "toggle": spec(pos=["value"], events=CHANGE_EVENTS),
@@ -1142,12 +1150,16 @@ class Compiler:
     def prop_hint(self, kind, name):
         """A dica de uma propriedade que não existe: um nome parecido, ou o elemento que a tem."""
         sp = SPECS[kind]
+        # os nomes do button usados noutro elemento
+        same = {("text", "text_size"): "size", ("text", "font_size"): "size", ("icon", "icon_size"): "size",
+                ("round_button", "icon_size"): "size", ("text", "bg"): "bg"}
+        if (kind, name) in same and same[(kind, name)] in sp["props"]:
+            return f"no {kind}, isso é '{same[(kind, name)]}'"
         close = suggest(name, sp["props"] | sp["flags"])
         if close:
             return close
-        if kind == "button" and name in ("size", "width", "height"):
-            return ("o button tem o tamanho do Gravity (52 px de altura, a largura do texto). "
-                    "size é do round_button, o botão redondo só com ícone")
+        if kind == "button" and name == "size":
+            return "no button, use icon_size, text_size, width ou height; size é do round_button, o botão redondo"
         owners = [k for k, s in SPECS.items() if k != "view" and name in s["props"]]
         if owners:
             shown = ", ".join(owners[:4]) + ("..." if len(owners) > 4 else "")
@@ -1493,8 +1505,27 @@ class Compiler:
             if "icon" in named:
                 self.check_icon(named["icon"])
             style = self.expr(named["style"], BUTTON_STYLE, "o style")[0] if "style" in named else "GV_BOTAO_CHEIO"
-            return f"gv_botao({ctx.idvar}, {icon}, {text}, {style})"
-        return self.component(el, call, events, "on_tap")
+            custom = [k for k in BUTTON_OPTIONS if k in named]
+            if not custom:
+                return f"gv_botao({ctx.idvar}, {icon}, {text}, {style})"
+            # com tamanhos ou cores próprios: parte do padrão do estilo e muda só o que foi dado
+            ovar = self.tmp("o")
+            pre.append(f"gv_botao_opcoes {ovar} = gv_botao_padrao({style});")
+            for k in custom:
+                field, kind = BUTTON_OPTIONS[k]
+                if kind == "sizing":
+                    value = self.sizing(named[k], "width")
+                elif kind == "weight":
+                    value = self.expr(named[k], WEIGHT, "o peso")[0]
+                elif kind == "color":
+                    value = self.expr(named[k], COLOR, f"o {k}")[0]
+                else:
+                    value = self.expr(named[k], NUMBER, f"o {k}")[0]
+                pre.append(f"{ovar}.{field} = {value};")
+            return f"gv_botao_ex({ctx.idvar}, {icon}, {text}, &{ovar})"
+        pre = []
+        out = self.component(el, call, events, "on_tap")
+        return pre + out
 
     def e_round_button(self, el, named, flags, events):
         if "icon" not in named:

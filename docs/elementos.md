@@ -173,24 +173,43 @@ button #more (icon: "dots", style: plain) { ... }
 | `text` (o 1.º valor) | `string` | sem texto |
 | `icon` | o nome de um ícone | sem ícone |
 | `style` | `filled` (cheio, de acento), `outline` (só a borda), `plain` (só o conteúdo) | `filled` |
+| `icon_size` | número | `22` |
+| `text_size` | número | `14` |
+| `weight` | `normal`, `medium`, `semibold`, `bold` | `semibold` no `filled`, `normal` nos outros |
+| `width` | `120`, `"50%"`, `grow`, `fit`... (como nos [contêineres](layout.md)) | `grow`: estica |
+| `height` | número | `52` |
+| `padding_x` | o espaço dos lados, por dentro | `16` |
+| `gap` | o espaço entre o ícone e o texto | `10` |
+| `radius` | os cantos | `radius_medium` do tema |
+| `bg` | a cor de fundo (quando o ponteiro passa, ela clareia um pouco) | a do `style` |
+| `color` | a cor do texto e do ícone | a do `style` |
+| `border_color` | a cor da borda | a do `style` (`outline`: `line`) |
+
+```
+button #big ("Increase", icon: "plus", icon_size: 30, text_size: 20, height: 64) { ... }
+button #save ("Salvar", icon: "check", bg: "#16a34a", color: white) { ... }
+button #del ("Apagar", icon: "trash", style: outline, color: danger, border_color: alpha(danger, 0.5)) { ... }
+button #ok ("Ok", width: 120) { ... }
+```
+
+O `style` dá o ponto de partida, e as outras propriedades mudam só o que você pedir. Se o conteúdo
+não couber na largura, ele é cortado dentro do botão, sem passar por cima dos vizinhos.
 
 Precisa de texto, de ícone ou dos dois. Eventos: **`on_tap`** e os [de ponteiro](#eventos).
 
-O `button` **não tem `size`**: ele tem 52 px de altura e **estica para ocupar a largura que
-tiver**. Para ele ficar mais estreito, ponha numa caixa com a largura que quiser:
+Sem `width`, o botão **estica para ocupar a largura que tiver**. Numa linha, os botões dividem o
+espaço:
 
 ```
-box (width: 200) {                 // ou width: "50%"
-    button #ok ("Ok", icon: "check") { on_tap { ... } }
-}
-row (grow, gap: 10) {              // dois numa linha dividem o espaço
+row (grow, gap: 10) {
     button #no ("Cancelar", style: outline) { on_tap { ... } }
     button #yes ("Ok", icon: "check") { on_tap { ... } }
 }
 ```
 
-Para um botão redondo com tamanho, use o [`round_button`](#round_button). Para um botão com
-altura e conteúdo próprios, use um contêiner:
+O `button` não tem `size` (para isso existem `icon_size`, `text_size`, `width` e `height`). O
+`size` é do [`round_button`](#round_button). Para um botão com conteúdo totalmente seu (dois
+textos, uma imagem...), use um contêiner:
 
 ```
 row #big (height: 64, padding_x: 24, gap: 10, align: center, radius: 32, bg: accent) {
