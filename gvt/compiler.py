@@ -1060,7 +1060,7 @@ class Compiler:
         for a in el.args:
             if a.name is not None:
                 if a.name not in sp["props"]:
-                    raise GvtError(a.pos, f"{el.kind} não tem a propriedade '{a.name}'", suggest(a.name, sp["props"] | sp["flags"]))
+                    raise GvtError(a.pos, f"{el.kind} não tem a propriedade '{a.name}'", self.prop_hint(el.kind, a.name))
                 if a.name in named:
                     raise GvtError(a.pos, f"'{a.name}' aparece duas vezes")
                 named[a.name] = a.value
@@ -1091,6 +1091,21 @@ class Compiler:
             raise GvtError(el.body[0].pos, f"{el.kind} não tem filhos",
                            "para um botão com conteúdo próprio use row #id (...) { ... on_tap { } }" if el.kind == "button" else None)
         return named, flags, events
+
+    def prop_hint(self, kind, name):
+        """A dica de uma propriedade que não existe: um nome parecido, ou o elemento que a tem."""
+        sp = SPECS[kind]
+        close = suggest(name, sp["props"] | sp["flags"])
+        if close:
+            return close
+        if kind == "button" and name in ("size", "width", "height"):
+            return ("o button tem o tamanho do Gravity (52 px de altura, a largura do texto). "
+                    "size é do round_button, o botão redondo só com ícone")
+        owners = [k for k, s in SPECS.items() if k != "view" and name in s["props"]]
+        if owners:
+            shown = ", ".join(owners[:4]) + ("..." if len(owners) > 4 else "")
+            return f"'{name}' existe em {shown}, mas não em {kind}"
+        return None
 
     def parent_direction(self):
         return self.elems[-1].direction if self.elems else None

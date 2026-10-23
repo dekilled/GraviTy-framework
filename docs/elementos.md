@@ -137,14 +137,26 @@ button #more (icon: "dots", style: plain) { ... }
 | `icon` | o nome de um ícone | sem ícone |
 | `style` | `filled` (cheio, de acento), `outline` (só a borda), `plain` (só o conteúdo) | `filled` |
 
-Precisa de texto, de ícone ou dos dois. Evento: **`on_tap`**. Para um botão com conteúdo próprio,
-use um `row #id (...) { ... on_tap { } }`.
+Precisa de texto, de ícone ou dos dois. Evento: **`on_tap`**.
+
+O `button` **não tem `size`**: ele tem o tamanho do Gravity (52 px de altura, e a largura do
+texto). Para um botão redondo com tamanho, use o [`round_button`](#round_button). Para um botão
+com tamanho e conteúdo próprios, use um contêiner:
+
+```
+row #big (height: 64, padding_x: 24, gap: 10, align: center, radius: 32, bg: accent) {
+    on_tap { count += 1 }
+    icon("plus", 24, color: white)
+    text("Increase", weight: semibold)
+}
+```
 
 ---
 
 ## `round_button`
 
-O botão redondo só com ícone, como os do mixer e dos ajustes rápidos.
+O botão redondo **só com ícone**, como os do mixer e dos ajustes rápidos. É o único botão com
+`size`.
 
 ```
 round_button #wifi (icon: "wifi", size: 52, on: wifi) {

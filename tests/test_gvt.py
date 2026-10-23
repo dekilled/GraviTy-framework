@@ -81,6 +81,8 @@ class Errors(unittest.TestCase):
         (app('        text("v = " + v)', "    var v = 0.5"), 4, 21, "não dá para usar + com textos", "interpolação"),
         (app('        texto("oi")'), 4, 9, "função desconhecida: 'texto'", "text"),
         (app('        row (gorw) { text("a") }'), 4, 14, "row não conhece 'gorw'", "grow"),
+        (app('        button #b ("x", size: 52)'), 4, 25, "button não tem a propriedade 'size'", "round_button"),
+        (app('        icon("x", gap: 4)'), 4, 19, "icon não tem a propriedade 'gap'", "existe em row"),
         (app('        button #x ("ok") { on_tap { text("clicou") } }'), 4, 37, "não pode ficar dentro de um evento", None),
         (app('        text("x", color: theme.acent)'), 4, 31, "o tema não tem 'acent'", "accent"),
         (app('        row (align: middle) { text("x") }'), 4, 21, "nome desconhecido: 'middle'", "center"),
