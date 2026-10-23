@@ -79,6 +79,27 @@ uma vez e mude item a item.
 
 Um parêntese aberto sem fechar. O `^` aponta onde ele deveria estar.
 
+### Gerei o `.c` mas ele não roda / `gravity.h: No such file or directory`
+
+O `gvt build app.gvt` só gera o código-fonte em C. Para ter um programa, use `gvt run app.gvt`
+(compila e abre) ou `gvt build app.gvt --exe` (só compila). Eles acham o Gravity, compilam a
+`libgravity` e chamam o compilador de C por você.
+
+### `não achei o Gravity`
+
+O `gvt run` precisa da pasta `gravity/` do LUMNA_OS, que só existe na branch `lumna-mobile`:
+`git -C ~/LUMNA_OS checkout lumna-mobile` e `export GRAVITY_DIR=~/LUMNA_OS/gravity`.
+
+### `faltam bibliotecas do Gravity`
+
+A dica traz o comando de instalação da sua distribuição. No Arch:
+`sudo pacman -S --needed wayland wayland-protocols libxkbcommon cairo pango pkgconf`.
+
+### `não há sessão Wayland aberta`
+
+O Gravity desenha direto no Wayland. Rode de dentro do Hyprland, do Sway, do GNOME ou KDE numa
+sessão Wayland, ou do Orbit. Numa sessão X11 ou num terminal sem interface gráfica, ele não abre.
+
 ### Avisos
 
 - **`'x' é declarado e nunca usado`**: uma variável local ou um parâmetro que ninguém lê. Apague, ou

@@ -1,5 +1,6 @@
 build/
 __pycache__/
 *.pyc
-# o C gerado pelo gvt build ao lado dos exemplos
-examples/*.c
+# o C e os executáveis gerados ao lado dos exemplos
+examples/*
+!examples/*.gvt

@@ -217,6 +217,25 @@ class Examples(unittest.TestCase):
                 self.assertEqual(warnings, [])
 
     @unittest.skipUnless(os.environ.get("GRAVITY_DIR") and shutil.which("gcc") and shutil.which("pkg-config"),
+                         "defina GRAVITY_DIR (e tenha gcc e pkg-config) para compilar de verdade")
+    def test_build_exe(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            src = os.path.join(tmp, "teste.gvt")
+            with open(src, "w", encoding="utf-8") as f:
+                f.write(app('        text("View 1", style: title)'))
+            r = subprocess.run([os.path.join(ROOT, "bin", "gvt"), "build", src, "--exe"], capture_output=True, text=True)
+            self.assertEqual(r.returncode, 0, r.stderr)
+            self.assertTrue(os.access(os.path.join(tmp, "teste"), os.X_OK))
+
+    def test_missing_gravity_is_explained(self):
+        env = dict(os.environ, GRAVITY_DIR="/nao/existe")
+        r = subprocess.run([os.path.join(ROOT, "bin", "gvt"), "run", os.path.join(ROOT, "examples", "ola.gvt")],
+                           capture_output=True, text=True, env=env)
+        self.assertEqual(r.returncode, 1)
+        self.assertIn("não achei o Gravity", r.stderr)
+        self.assertIn("lumna-mobile", r.stderr)
+
+    @unittest.skipUnless(os.environ.get("GRAVITY_DIR") and shutil.which("gcc") and shutil.which("pkg-config"),
                          "defina GRAVITY_DIR (e tenha gcc e pkg-config) para passar o C pelo gcc")
     def test_generated_c_passes_gcc(self):
         gdir = os.environ["GRAVITY_DIR"]

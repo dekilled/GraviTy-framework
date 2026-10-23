@@ -46,15 +46,19 @@ Precisa de `python3` (sem nenhuma biblioteca extra), das dependências do Gravit
 `wayland-protocols`, `libxkbcommon`, `cairo`, `pango`) e da pasta `gravity/` do LUMNA_OS.
 
 ```sh
-# com CMake (o jeito recomendado)
-cmake -B build -DGRAVITY_DIR=/caminho/LUMNA_OS/gravity
-cmake --build build
-./build/mixer
+git -C ~/LUMNA_OS checkout lumna-mobile        # o gravity/ só existe nessa branch
+export GRAVITY_DIR=~/LUMNA_OS/gravity
 
-# ou só o compilador
-bin/gvt build examples/ola.gvt      # gera examples/ola.c
-bin/gvt check examples/*.gvt        # só procura erros
+bin/gvt run examples/ola.gvt                   # compila e abre (o jeito mais fácil)
+bin/gvt build examples/ola.gvt --exe           # só gera o executável examples/ola
+bin/gvt build examples/ola.gvt                 # só gera o C (examples/ola.c), que ainda não roda sozinho
+bin/gvt check examples/*.gvt                   # só procura erros
+
+# os exemplos todos, com CMake
+cmake -B build -DGRAVITY_DIR=$GRAVITY_DIR && cmake --build build && ./build/mixer
 ```
+
+Para chamar só `gvt` de qualquer pasta: `ln -s "$PWD/bin/gvt" ~/.local/bin/gvt`.
 
 No seu próprio projeto CMake:
 

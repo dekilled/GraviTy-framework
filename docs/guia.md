@@ -32,13 +32,28 @@ app Ajustes {
 Compile e rode:
 
 ```sh
-gvt build ajustes.gvt           # gera ajustes.c
-cc ajustes.c -I$GRAVITY_DIR/src -I$GRAVITY_DIR/vendor/clay $GRAVITY_DIR/libgravity.a \
-   $(pkg-config --cflags --libs wayland-client wayland-cursor xkbcommon cairo pangocairo) -lm -o ajustes
-./ajustes
+gvt run ajustes.gvt
 ```
 
-Ou, bem mais simples, com o CMake (veja [o passo 8](#8-no-cmake)).
+Pronto, a janela abre. O `gvt run` faz tudo sozinho: transforma o `.gvt` em C, compila a
+`libgravity` na primeira vez, chama o compilador de C e abre o app. Para só gerar o executável,
+sem abrir, use `gvt build ajustes.gvt --exe`.
+
+Na primeira vez, o `gvt` precisa saber onde está o Gravity, que é a pasta `gravity/` do LUMNA_OS
+(**ela só existe na branch `lumna-mobile`**):
+
+```sh
+git -C ~/LUMNA_OS checkout lumna-mobile
+export GRAVITY_DIR=~/LUMNA_OS/gravity     # ponha no ~/.bashrc para não repetir
+```
+
+Se o LUMNA_OS estiver na sua pasta pessoal ou ao lado do projeto, o `gvt` acha sozinho. Se
+faltar alguma coisa (o Gravity, uma biblioteca, uma sessão Wayland), ele diz o que é e como
+instalar.
+
+> **E o `gvt build ajustes.gvt` sozinho?** Ele só gera o `ajustes.c`, que é o código-fonte em C.
+> Um `.c` não roda: ainda precisa ser compilado e ligado à `libgravity`. Isso é o que o `gvt run`
+> e o `--exe` fazem por você (e o CMake, no [passo 8](#8-no-cmake)).
 
 - `app Ajustes { ... }` é o app. As linhas `nome: valor` lá dentro configuram a janela.
 - `view` é a tela. Por padrão ele é uma **coluna** que ocupa a janela toda.
