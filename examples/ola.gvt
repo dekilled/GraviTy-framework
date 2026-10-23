@@ -1,0 +1,22 @@
+// O primeiro app em GraviTy: um contador.
+
+app Ola {
+    title: "Olá, LUMNA"
+    size: 360 x 240
+
+    var taps = 0
+
+    view (center, gap: 16, bg: "#0b0814") {
+        text("Olá, LUMNA", style: title, weight: semibold)
+        text(taps == 0 ? "Ainda ninguém tocou no botão." : "Você tocou {taps} vez(es).", color: muted)
+
+        row (gap: 10) {
+            button #more ("Tocar", icon: "check") {
+                on_tap { taps += 1 }
+            }
+            button #reset ("Zerar", icon: "refresh", style: outline) {
+                on_tap { taps = 0 }
+            }
+        }
+    }
+}

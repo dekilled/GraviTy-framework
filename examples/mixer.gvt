@@ -1,0 +1,163 @@
+// O mixer de áudio do LUMNA, em GraviTy: a mesma tela do gravity/exemplos/mixer.c (pixel a pixel),
+// com uns 40% menos linhas.
+// Os volumes ainda são de mentira; a ligação ao PipeWire vem depois.
+//
+//   ./mixer            numa janela
+//   ./mixer --camada   como no celular: uma camada por cima de tudo, com o véu atrás
+
+app Mixer {
+    let layer_mode = has_arg("--camada")
+
+    title: "Mixer de áudio"
+    id: "lumna-mixer"
+    kind: layer_mode ? layer : window
+    size: layer_mode ? 0 : 460 x layer_mode ? 0 : 660
+    layer: overlay
+    anchors: all
+    keyboard: true
+
+    let outputs = ["Alto-falante", "Fones Bluetooth", "HDMI"]
+    let output_icons = ["speaker", "headphones", "desktop"]
+
+    var output = 0
+    var list_open = false
+    var volume = 0.62
+    var apps = [
+        {name: "Música", icon: "music", volume: 0.8, muted: false},
+        {name: "Emma", icon: "waves", volume: 0.55, muted: false},
+        {name: "Navegador", icon: "globe", volume: 0.35, muted: true},
+    ]
+
+    fn pct(v: float) -> int {
+        return round(v * 100)
+    }
+
+    // a entrada do painel: o "pop" do shell (cresce de 97% e aparece)
+    var entrance = 0.0
+
+    on_frame {
+        entrance = animate(1.0)
+    }
+
+    on_key {
+        if key == "Escape" { quit() }
+    }
+
+    // o véu: tocar fora do cartão fecha a lista (ou o mixer)
+    view (center, padding: 20, bg: alpha(theme.background, theme.background.a / 255 * entrance)) {
+        on_tap {
+            if not hovered(#card) {
+                if list_open { list_open = false } else { quit() }
+            }
+        }
+
+        card #card (width: grow(0, 420 * (0.97 + 0.03 * entrance)), padding: [22, 20, 16, 20],
+                    bg: alpha(theme.surface, theme.surface.a / 255 * entrance)) {
+            header()
+            output_row()
+            global_volume()
+            app_rows()
+            footer()
+        }
+    }
+}
+
+fn header() {
+    row #header (grow, gap: 16, align: center) {
+        icon("volume", 32)
+        text("Mixer de áudio", style: title, weight: semibold, grow)
+        box #close (width: 40, height: 40, center, radius: 20,
+                    bg: alpha(white, animate(hovered ? 0.08 : 0, fast))) {
+            on_tap { quit() }
+            icon("close", 24)
+        }
+    }
+}
+
+fn output_row() {
+    row #output_row (grow, padding_top: 22, gap: 12, align: center) {
+        text("Saída", color: muted, grow)
+
+        row #chip (height: 50, padding_x: 16, gap: 10, align: center, radius: 25,
+                   bg: alpha(white, pressed ? 0.1 : 0.04), border: 1, border_color: alpha(white, 0.12)) {
+            on_tap { list_open = !list_open }
+            icon(output_icons[output], 20)
+            text(outputs[output], size: 14)
+            icon(list_open ? "chevron-down" : "forward", 16)
+
+            // a lista das saídas, flutuando por baixo do chip
+            if list_open {
+                column #outputs (width: 230, padding: 6, bg: "#1c1828", radius: 14,
+                                 border: 1, border_color: alpha(accent, 0.2),
+                                 float: below_right, offset: [0, 6], shadow: [24, 14, 0.5]) {
+                    for i, name in outputs {
+                        row #output[i] (grow, height: 44, padding_x: 10, gap: 10, align: center, radius: 10,
+                                        bg: output == i ? alpha(accent, 0.14) : alpha(white, hovered ? 0.05 : 0)) {
+                            on_tap {
+                                output = i
+                                list_open = false
+                            }
+                            icon(output_icons[i], 18)
+                            text(name, size: 14, grow)
+                            if output == i {
+                                icon("check", 16, color: accent)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+fn global_volume() {
+    column #global (grow, padding_top: 18, padding_bottom: 16, gap: 8,
+                    border_bottom: 1, border_color: alpha(white, 0.08)) {
+        text("Volume global", color: muted)
+        row #global_line (grow, gap: 14, align: center) {
+            slider #global_volume (value: volume)
+            text("{pct(volume)}%", width: 44, align: end)
+        }
+    }
+}
+
+fn app_rows() {
+    for i, a in apps {
+        row #app[i] (grow, height: fit(62), gap: 12, align: center,
+                     border_bottom: 1, border_color: alpha(white, 0.06)) {
+            box (width: 34, height: 34, center, bg: alpha(accent, 0.12), radius: theme.radius_small) {
+                icon(a.icon, 22)
+            }
+            text(a.name, width: 92)
+            round_button #mute[i] (icon: a.muted ? "mute" : "volume", size: 44, on: a.muted, danger: true) {
+                on_tap { a.muted = !a.muted }
+            }
+            // mudo mostra 0, mas o volume fica guardado: mexer no deslizante tira o mudo
+            slider #volume[i] (value: a.muted ? 0.0 : a.volume, track: 10, knob: 24) {
+                on_change {
+                    a.volume = value
+                    a.muted = false
+                }
+            }
+            text("{a.muted ? 0 : pct(a.volume)}%", width: 44, align: end)
+        }
+    }
+}
+
+fn footer() {
+    row #footer (grow, padding_top: 16, gap: 10, align: center) {
+        button #reset ("Redefinir volumes", icon: "refresh", style: outline) {
+            on_tap {
+                volume = 0.62
+                for a in apps {
+                    a.volume = 1
+                    a.muted = false
+                }
+            }
+        }
+        separator(length: 40)
+        button #settings ("Ajustes de áudio", icon: "settings", style: plain) {
+            on_tap { print("abrir os ajustes de áudio") }
+        }
+    }
+}

@@ -1,0 +1,57 @@
+// Ajustes rápidos: o app que o guia (docs/guia.md) monta passo a passo.
+
+app Ajustes {
+    title: "Ajustes rápidos"
+    size: 420 x 520
+
+    var brightness = 0.6
+    var settings = [
+        {name: "Wi-Fi", icon: "wifi", on: true},
+        {name: "Bluetooth", icon: "bluetooth", on: false},
+        {name: "Não perturbe", icon: "moon", on: false},
+        {name: "Modo avião", icon: "plane", on: false},
+    ]
+
+    on_key {
+        if key == "Escape" { quit() }
+    }
+
+    view (padding: 24, gap: 16, bg: "#0b0814") {
+        text("Ajustes rápidos", style: title, weight: semibold)
+
+        card (grow, padding: 8) {
+            for i in 0..len(settings) {
+                setting_row(i)
+            }
+        }
+
+        card (grow, padding: [14, 16]) {
+            row (grow, gap: 12, align: center) {
+                icon("sun", 22)
+                slider #brightness (value: brightness)
+                text("{round(brightness * 100)}%", width: 44, align: end)
+            }
+        }
+
+        text("{count_on()} de {len(settings)} ligados", style: caption, color: faint)
+    }
+}
+
+// uma linha da lista: ícone, nome e o interruptor
+fn setting_row(i: int) {
+    let on = settings[i].on
+    row #line (grow, height: 52, padding_x: 12, gap: 12, align: center, radius: 12,
+               bg: alpha(white, animate(hovered ? 0.05 : 0, fast))) {
+        icon(settings[i].icon, 22, color: on ? accent : muted)
+        text(settings[i].name, grow)
+        toggle #switch (value: settings[i].on)
+    }
+}
+
+fn count_on() -> int {
+    var n = 0
+    for s in settings {
+        if s.on { n += 1 }
+    }
+    return n
+}

@@ -1,0 +1,150 @@
+// A galeria do Gravity em GraviTy: os componentes e o tema mudando ao vivo.
+// Os controles de cima mexem no tema (cor de acento, cantos, tamanho do texto, animações, curva)
+// e tudo por baixo segue.
+
+app Galeria {
+    title: "Gravity"
+    id: "gravity-galeria"
+    size: 600 x 760
+
+    let colors = [
+        {name: "Violeta", accent: "#a78bfa", strong: "#8b5cf6", icon: "#b9a2fb"},
+        {name: "Rosa", accent: "#f472b6", strong: "#db2777", icon: "#f9a8d4"},
+        {name: "Azul", accent: "#60a5fa", strong: "#2563eb", icon: "#93c5fd"},
+        {name: "Verde", accent: "#4ade80", strong: "#16a34a", icon: "#86efac"},
+        {name: "Laranja", accent: "#fb923c", strong: "#ea580c", icon: "#fdba74"},
+    ]
+
+    var color = 0
+    var corners = 26 / 32.0  // 0..1 -> 0..32 px
+    var text_size = 2 / 6.0  // 0..1 -> 13..19 px
+    var animations = true
+    var springy = false
+    var wifi = true
+    var bluetooth = false
+    var brightness = 0.7
+    var taps = 0
+
+    on_key {
+        if key == "Escape" { quit() }
+    }
+
+    // a cada quadro, os controles viram tema
+    on_frame {
+        theme.accent = colors[color].accent
+        theme.accent_strong = colors[color].strong
+        theme.icon = colors[color].icon
+        theme.radius_large = round(corners * 32)
+        theme.radius_medium = round(corners * 20)
+        theme.radius_small = round(corners * 11)
+        theme.size_body = round(13 + text_size * 6)
+        theme.size_title = theme.size_body + 7
+        theme.animations = animations
+        theme.curve = springy ? spring : smooth
+    }
+
+    view (center, padding: 20, bg: "#0b0814") {
+        card #card (width: grow(0, 520), padding: [22, 24, 20, 24], bg: "#16131f") {
+            row #top (gap: 14, align: center) {
+                icon("star", 30)
+                text("Gravity", style: title, weight: semibold)
+            }
+            box #sub (padding_top: 4) {
+                text("A interface do LUMNA OS, em C, por cima do Orbit.", color: muted)
+            }
+            theme_section()
+            components()
+        }
+    }
+}
+
+fn section_title(title: string) {
+    box (padding_top: 18, padding_bottom: 6) {
+        text(title, style: caption, color: faint, weight: semibold)
+    }
+}
+
+// o rótulo à esquerda de cada linha
+fn label(title: string) {
+    box (width: 180) {
+        text(title, color: muted)
+    }
+}
+
+fn theme_section() {
+    section_title("TEMA (MUDA TUDO AO VIVO)")
+
+    row #l_color (grow, height: fit(48), gap: 12, align: center) {
+        label("Cor de acento")
+        for i, c in colors {
+            let picked = animate(color == i ? 1 : 0)
+            box #swatch[i] (width: 34, height: 34, center, radius: 17,
+                            border: 2, border_color: alpha(white, 0.85 * picked)) {
+                on_tap { color = i }
+                let side = 22 + 4 * (1 - picked)
+                box (width: side, height: side, bg: c.accent, radius: side / 2)
+            }
+        }
+    }
+
+    row #l_radius (grow, height: fit(48), gap: 12, align: center) {
+        label("Cantos")
+        slider #radius (value: corners, track: 8, knob: 22)
+        text("{round(corners * 32)} px", width: 52, align: end)
+    }
+
+    row #l_text (grow, height: fit(48), gap: 12, align: center) {
+        label("Tamanho do texto")
+        slider #text (value: text_size, track: 8, knob: 22)
+        text("{round(13 + text_size * 6)} px", width: 52, align: end)
+    }
+
+    row #l_anim (grow, height: fit(48), gap: 12, align: center) {
+        label("Animações")
+        spacer
+        toggle #anim (value: animations)
+    }
+
+    row #l_spring (grow, height: fit(48), gap: 12, align: center) {
+        label("Curva de mola")
+        spacer
+        toggle #spring (value: springy)
+    }
+}
+
+fn on_off(on: bool) -> string {
+    return on ? "ligado" : "desligado"
+}
+
+fn components() {
+    section_title("COMPONENTES")
+
+    row #buttons (grow, gap: 10) {
+        button #filled ("Confirmar", icon: "check") {
+            on_tap { taps += 1 }
+        }
+        button #outline ("Repetir", icon: "refresh", style: outline) {
+            on_tap { taps += 1 }
+        }
+        button #plain ("Ajustes", icon: "settings", style: plain) {
+            on_tap { taps += 1 }
+        }
+    }
+
+    row #quick (grow, padding_top: 14, gap: 12, align: center) {
+        round_button #wifi (icon: "wifi", size: 52, on: wifi) {
+            on_tap { wifi = !wifi }
+        }
+        round_button #bluetooth (icon: "bluetooth", size: 52, on: bluetooth) {
+            on_tap { bluetooth = !bluetooth }
+        }
+        spacer(8)
+        icon("sun", 22)
+        slider #brightness (value: brightness)
+    }
+
+    box #footer (padding_top: 16) {
+        text("Wi-Fi {on_off(wifi)} · Bluetooth {on_off(bluetooth)} · brilho {round(brightness * 100)}% · {taps} toques nos botões",
+             style: caption, color: faint)
+    }
+}

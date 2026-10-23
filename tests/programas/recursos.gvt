@@ -1,0 +1,86 @@
+// Um programa que usa quase tudo o que a documentação promete: os testes compilam ele com gcc -Werror.
+app Tudo {
+    title: "Tudo"
+    id: "tudo"
+    kind: has_arg("--camada") ? layer : window
+    size: 400 x 600
+    layer: top
+    anchors: [top, left, right]
+    exclusive: 40
+    keyboard: true
+    theme: "/nao/existe.ini"
+
+    var on = false
+    var level = 0.5
+    var count = 0
+    var temp = 21.456
+    var name = "Emma"
+    var tint = rgb(0x7c5cffff)
+    var player = {title: "Sem título", playing: false}
+    let xs = [3, 1, 2]
+
+    on_start {
+        print("começou: {name}")
+        load_theme("/nao/existe.ini")
+    }
+
+    on_frame {
+        count = 0
+        for i in 1..=5 {
+            if i == 4 { break }
+            if i % 2 == 0 { continue }
+            count += 1
+        }
+        var n = 0
+        while n < 3 { n += 1 }
+        temp = clamp(temp, 0.0, 100.0)
+    }
+
+    on_key {
+        if key == "Return" or key == "space" { on = not on }
+        if key == "Escape" { quit() }
+    }
+
+    view (padding: [8, 12], gap: 8, bg: "#0b0814", scroll: vertical) {
+        text("{temp:.1} °C · {{literal}} · {count} · {name == "Emma"} · {player.title}", style: caption)
+        text("abs {abs(-3)} min {min(2, 5)} max {max(1.5, 2)} pow {pow(2, 3):.0} floor {floor(2.7)} ceil {ceil(2.1)} mod {5.5 % 2}")
+        text("agora {now():.2} largura {width()} {sqrt(16)} {sin(0.0)} {cos(0.0)} {int(2.9)} {float(3)} {len(xs)}")
+        row (grow, gap: 8, align: center, justify: end) {
+            separator(vertical)
+            spacer(8)
+            spacer
+            icon("star", 20, color: alpha(tint, tint.a / 255))
+            toggle #t (value: on) {
+                on_change { print("on: {value}") }
+            }
+        }
+        slider #s (value: level, track: 10, knob: 24) {
+            on_change { print("nível {value:.2}") }
+        }
+        text("toque aqui", width: "50%", padding: 8, bg: animate(on ? accent : surface, slow), radius: 8, align: center) {
+            on_tap { player.playing = !player.playing }
+        }
+        box (width: percent(0.5), height: fit(62)) {}
+        card #c (width: grow(max: 420), direction: row, gap: 8, padding: [4, 8, 4, 8]) {
+            box #b (width: 40, height: 40, bg: pressed ? danger : surface_high, border: 2, border_top: 4, border_color: line) {
+                column #f (float: above_left, offset: [0, -4], z: 20, shadow: true, bg: surface, padding_x: 6, padding_y: 2) {
+                    text("dica", size: 12)
+                }
+            }
+            column (clip, fill) { text("cortado") }
+            round_button #r (icon: "wifi", on: on, danger: false, size: 40) { on_tap { on = !on } }
+            button #bb (icon: "dots", style: plain) { on_tap { count += 1 } }
+        }
+        for i, x in xs {
+            label_row(label: "item {i}", value: x)
+        }
+        if hovered(#c) or tapped(#bb) { redraw() }
+    }
+}
+
+fn label_row(label: string, value: int) {
+    row #line (grow, gap: 4) {
+        text(label, grow)
+        text("{value}", color: faint)
+    }
+}

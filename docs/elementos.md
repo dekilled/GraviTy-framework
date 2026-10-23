@@ -1,0 +1,247 @@
+# Elementos
+
+Um elemento se escreve assim:
+
+```
+tipo #id (propriedades) {
+    filhos
+    on_evento { ... }
+}
+```
+
+Tudo é opcional menos o tipo: `spacer`, `text("oi")`, `row (gap: 8) { ... }`,
+`button #ok ("Ok") { on_tap { ... } }`.
+
+- **`#id`** dá nome ao elemento. Quem reage a toques (`button`, `slider`, `toggle`, `round_button`,
+  contêineres com `on_tap`, ou quem usa `hovered`/`pressed`) precisa de um id, mas o GraviTy
+  cria um sozinho se você não der. Dê um id quando quiser falar do elemento de outro lugar:
+  `hovered(#card)`. Para ids numa lista, use `#nome[i]`. Dentro de um `for` isso já acontece
+  sozinho, então `#nome` basta.
+- **Propriedades** são `nome: valor`. Algumas são **palavras soltas** (`grow`, `center`...).
+  Alguns elementos aceitam o primeiro valor sem nome: `text("oi")` é `text(text: "oi")`.
+- **Eventos** (`on_tap`, `on_change`) ficam no corpo, em qualquer lugar entre os filhos. O que
+  está dentro deles muda o estado. Eles não desenham: elementos dentro de um evento são erro.
+
+Dentro das propriedades e do corpo de um elemento, `hovered` (o ponteiro está em cima) e `pressed`
+(foi tocado e ainda não soltou) falam **desse** elemento.
+
+---
+
+## Contêineres: `view`, `row`, `column`, `box`, `card`
+
+Guardam outros elementos.
+
+| | direção | começa com |
+|---|---|---|
+| `view` | coluna | a janela inteira (`fill`). É a raiz: um por app |
+| `row` | linha (lado a lado) | o tamanho dos filhos |
+| `column` | coluna (um embaixo do outro) | o tamanho dos filhos |
+| `box` | linha | o tamanho dos filhos: uma caixa genérica |
+| `card` | coluna | o cartão do LUMNA: superfície, borda, `radius_large`, `padding: 20` e sombra |
+
+Propriedades (as mesmas para todos; detalhes em [Layout](layout.md)):
+
+| propriedade | valor | |
+|---|---|---|
+| `grow` | palavra solta | ocupa a largura disponível |
+| `fill` | palavra solta | ocupa a largura e a altura |
+| `center` | palavra solta | centraliza os filhos nos dois eixos |
+| `clip` | palavra solta | corta o que passa das bordas |
+| `width`, `height` | `120`, `grow`, `fit`, `grow(0, 420)`, `fit(62)`, `percent(0.5)`, `"50%"` | o tamanho |
+| `padding` | `16`, `[vertical, horizontal]`, `[cima, direita, baixo, esquerda]` | o espaço por dentro (ordem do CSS) |
+| `padding_x`, `padding_y` | número | dos lados / em cima e embaixo |
+| `padding_top`, `padding_right`, `padding_bottom`, `padding_left` | número | um lado |
+| `gap` | número | o espaço entre os filhos |
+| `align` | `start`, `center`, `end` (ou `top`/`bottom`, `left`/`right`) | os filhos no eixo cruzado (como `align-items`) |
+| `justify` | o mesmo | os filhos no eixo principal (como `justify-content`) |
+| `bg` (ou `background`) | uma cor | o fundo |
+| `radius` | número | os cantos arredondados |
+| `border` | número | a borda em volta |
+| `border_top`, `border_right`, `border_bottom`, `border_left` | número | a borda de um lado só |
+| `border_color` | uma cor | a cor da borda (sem ela: `line` do tema) |
+| `float` | `below`, `below_left`, `below_right`, `above`, `above_left`, `above_right`, `left`, `right`, `center`, `top_left`, `top_right`, `bottom_left`, `bottom_right` | flutua por cima de tudo, preso ao pai |
+| `offset` | `[x, y]` | desloca um elemento flutuante |
+| `z` | int | a ordem dos flutuantes (padrão 10) |
+| `shadow` | `true` ou `[desfoque, y, opacidade]` | sombra macia |
+| `scroll` | `vertical`, `horizontal`, `both` | rola com o dedo, o mouse e a roda |
+| `direction` | `row`, `column` | troca a direção (útil no `card` e no `box`) |
+
+Evento: **`on_tap`**, quando o elemento é tocado (o toque começa e termina nele).
+
+```
+row #chip (height: 50, padding_x: 16, gap: 10, align: center, radius: 25,
+           bg: alpha(white, pressed ? 0.1 : 0.04), border: 1, border_color: alpha(white, 0.12)) {
+    on_tap { open = !open }
+    icon("speaker", 20)
+    text("Alto-falante", size: 14)
+}
+```
+
+---
+
+## `text`
+
+```
+text("Olá")
+text("Mixer de áudio", style: title, weight: semibold)
+text("{pct(volume)}%", width: 44, align: end)
+text(name, size: 14, grow)
+```
+
+| propriedade | valor | padrão |
+|---|---|---|
+| `text` (o 1.º valor) | `string` (com interpolação) | (obrigatório) |
+| `style` | `caption`, `body`, `highlight`, `title` | `body` |
+| `size` | número (troca o `style`) | o do `style` |
+| `color` | uma cor | `text` |
+| `weight` | `normal`, `medium`, `semibold`, `bold` | `normal` |
+
+O texto também aceita **as propriedades de contêiner** (`grow`, `width`, `padding`, `bg`...). Com
+elas, o texto ganha uma caixa em volta, e então **`align` alinha o texto dentro da caixa**
+(`start`, `center`, `end`). Com caixa, `on_tap` também funciona.
+
+---
+
+## `icon`
+
+```
+icon("volume")
+icon("close", 24)
+icon("check", 16, color: accent)
+```
+
+| propriedade | valor | padrão |
+|---|---|---|
+| `name` (o 1.º valor) | o nome de um ícone do LUMNA | (obrigatório) |
+| `size` (o 2.º valor) | número | `24` |
+| `color` | uma cor | `icon` do tema |
+
+Os ícones são os mesmos 130 do shell (`shell/src/components/Icon.vue`). Com `--gravity` (ou
+`GRAVITY_DIR`), o `gvt` avisa quando o nome não existe e sugere o certo. A lista está em
+`gravity/src/gv_icones.c`.
+
+---
+
+## `button`
+
+```
+button #save ("Salvar", icon: "check") {
+    on_tap { save() }
+}
+button #reset ("Redefinir", icon: "refresh", style: outline) { ... }
+button #more (icon: "dots", style: plain) { ... }
+```
+
+| propriedade | valor | padrão |
+|---|---|---|
+| `text` (o 1.º valor) | `string` | sem texto |
+| `icon` | o nome de um ícone | sem ícone |
+| `style` | `filled` (cheio, de acento), `outline` (só a borda), `plain` (só o conteúdo) | `filled` |
+
+Precisa de texto, de ícone ou dos dois. Evento: **`on_tap`**. Para um botão com conteúdo próprio,
+use um `row #id (...) { ... on_tap { } }`.
+
+---
+
+## `round_button`
+
+O botão redondo só com ícone, como os do mixer e dos ajustes rápidos.
+
+```
+round_button #wifi (icon: "wifi", size: 52, on: wifi) {
+    on_tap { wifi = !wifi }
+}
+round_button #mute (icon: muted ? "mute" : "volume", on: muted, danger: true) { ... }
+```
+
+| propriedade | valor | padrão |
+|---|---|---|
+| `icon` (o 1.º valor) | o nome de um ícone | (obrigatório) |
+| `size` | número | `44` |
+| `on` | `bool`: pinta como ativo | `false` |
+| `danger` | `bool`: o "ativo" fica vermelho | `false` |
+
+Evento: **`on_tap`**.
+
+---
+
+## `slider`
+
+Um deslizante de 0 a 1 (volume, brilho...). Ocupa a largura que sobrar.
+
+```
+slider #volume (value: volume)
+slider #brightness (value: brightness, track: 10, knob: 24)
+```
+
+| propriedade | valor | padrão |
+|---|---|---|
+| `value` (o 1.º valor) | um `float` | (obrigatório) |
+| `track` | a grossura do trilho | `12` |
+| `knob` | o tamanho do botão redondo | `28` |
+
+Se `value` é uma variável (ou um campo, ou um item de lista), **o slider muda ela sozinho**.
+
+Se `value` é uma conta, o slider só mostra o resultado. Para reagir quando ele mexe, use
+**`on_change`**, onde `value` é o valor novo:
+
+```
+// mudo mostra 0, mas o volume fica guardado
+slider #volume[i] (value: a.muted ? 0.0 : a.volume) {
+    on_change {
+        a.volume = value
+        a.muted = false
+    }
+}
+```
+
+`on_change` também funciona com uma variável: roda depois de ela mudar.
+
+---
+
+## `toggle`
+
+O interruptor liga/desliga animado.
+
+```
+toggle #wifi (value: wifi)
+toggle #anim (value: animations) {
+    on_change { print("animações: {value}") }
+}
+```
+
+`value` é um `bool` e funciona como no `slider`: com uma variável, ele muda sozinho; com uma conta,
+use `on_change`.
+
+---
+
+## `separator`
+
+Uma linha de 1 px na cor `line` do tema.
+
+```
+separator               // atravessa o pai todo
+separator(length: 40)   // 40 px
+separator(vertical)
+```
+
+Num `row` ele é vertical e numa `column`, horizontal. `vertical` e `horizontal` forçam a
+direção. Sem `length`, ocupa o pai todo.
+
+---
+
+## `spacer`
+
+Um espaço vazio.
+
+```
+row (grow) {
+    text("Animações")
+    spacer                  // empurra o toggle para a direita
+    toggle #anim (value: animations)
+}
+spacer(8)                   // 8 px fixos
+```
+
+Sem valor, ocupa o espaço que sobrar no eixo do pai: largura num `row`, altura numa `column`.
+Com valor, ocupa só aqueles pixels.
